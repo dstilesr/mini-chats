@@ -37,7 +37,7 @@ To subscribe to a channel, the client must send a request with this schema:
 {
   "action": "subscribe",
   "params": {
-    "channel": "<channel name>"
+    "channel_name": "<channel name>"
   }
 }
 ```
@@ -48,7 +48,7 @@ The server will send a confirmation with this schema:
   "status": "ok",
   "info": {
     "channel_name": "<channel name>",
-    "total_users": 1
+    "total_subscribers": 1
   }
 }
 ```
@@ -79,6 +79,7 @@ When a message is dispatched by a client, all subscribers to the channel will ge
 ```json
 {
   "sender": "<given client name>",
+  "channel_name": "<channel name>",
   "sent_at": "<timestamp when message was received by server - ISO format with timezone>",
   "content": "<Message Content>"
 }
@@ -90,7 +91,7 @@ To unsubscribe from a channel, the client must send a request with this schema:
 {
   "action": "unsubscribe",
   "params": {
-    "channel": "<channel name>"
+    "channel_name": "<channel name>"
   }
 }
 ```
@@ -122,4 +123,4 @@ Basic confirgurations for the server will be given by the following environment 
 
 ## Implementations
 
-- [`Python`](./python/README.md)
+- [`Python`](./python-src/README.md)

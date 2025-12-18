@@ -15,6 +15,7 @@
 **/venv/
 **/dist/
 **/build/
+python-src/*[\-_]cache
 
 # IDEs
 .idea/
