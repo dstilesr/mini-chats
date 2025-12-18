@@ -1,0 +1,22 @@
+# Envs
+**/*.env
+
+# Go-Task
+.task/
+
+# OS
+**/.DS_Store
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/.ipynb_checkpoints/
+**/.venv/
+**/venv/
+**/dist/
+**/build/
+
+# IDEs
+.idea/
+.zed/
+.vscode/

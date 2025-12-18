@@ -1,0 +1,31 @@
+[project]
+name = "mini-chats"
+version = "0.1.0"
+description = "Mini Chat server implementation in Python"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.125.0",
+    "pydantic>=2,<3",
+    "pydantic-settings>=2,<3",
+    "uvicorn>=0.38.0",
+    "websockets>=15.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.9",
+]
+
+[tool.ruff]
+line-length = 80
+exclude = [
+    ".venv",
+    "venv",
+    "**/.ipynb_checkpoints",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+line-ending = "lf"
+indent-style = "space"
