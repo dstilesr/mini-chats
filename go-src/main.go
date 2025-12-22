@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	app, err := GetApplication()
+	app, err := NewApplication()
 	if err != nil {
 		slog.Error("Failed to start application. Exiting.", "error", err)
 		return
