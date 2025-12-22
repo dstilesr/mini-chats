@@ -18,9 +18,9 @@ The following API contracts will be used by all implementations. The endpoint to
 server via a socket will be `/api/connect`.
 
 ### Establish Connection
-When establishing a connection from a client, the client may send an `X-Client-Name` header
-together with an ID to be associated to their messages. If this header is not given, a random
-name of some sort will be assigned to them. When a connection is established, the server will send
+When establishing a connection from a client, the client may send a `client_name` query parameter
+to be associated to their messages (e.g., `/api/connect?client_name=Alice`). If this parameter is
+not given, a random name of some sort will be assigned to them. When a connection is established, the server will send
 a confirmation with this schema:
 ```json
 {

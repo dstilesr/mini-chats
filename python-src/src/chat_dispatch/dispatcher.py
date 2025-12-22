@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from functools import partial
 
+from fastapi import WebSocket
+
 from . import schemas as sch
 from .task_runner import runner
 from .user_conn import ClientConnection
@@ -34,27 +36,15 @@ class Dispatcher:
         """
         Register a new client connection.
         """
-        new_client = ClientConnection.create(self.receive_queue, client_name)
+        new_client = ClientConnection.create(client_name)
         self.clients[new_client.client_name] = new_client
         return sch.ServerResponse(
             status="ok", info={"client_name": new_client.client_name}
         )
 
-    async def listen(self):
-        """
-        Listen for messages on the queue.
-        """
-        while True:
-            (sender, msg) = await self.receive_queue.get()
-            match type(msg):
-                case sch.SendRequest:
-                    await self.publish(sender, msg)  # type: ignore
-                case sch.SubscribeRequest:
-                    await self.subscribe(sender, msg)  # type: ignore
-                case sch.UnSubscribeRequest:
-                    await self.unsubscribe(sender, msg)  # type: ignore
-
-    async def subscribe(self, client_name: str, req: sch.SubscribeRequest):
+    async def subscribe(
+        self, client_name: str, req: sch.SubscribeRequest
+    ) -> sch.ServerResponse:
         """
         Subscribe a client to a channel.
         """
@@ -64,35 +54,31 @@ class Dispatcher:
                     "Client name '%s' not found among existing clients",
                     client_name,
                 )
-                return
+                return sch.ServerResponse(
+                    status="error", info={"detail": "Client not found"}
+                )
 
             channel = req.params.channel_name
-            client = self.clients[client_name]
             if not channel:
                 logger.error("Invalid channel name (empty)")
-                await client.rsp_queue.put(
-                    sch.ServerResponse(
-                        status="error",
-                        info={"detail": "Empty channel name given"},
-                    )
+                return sch.ServerResponse(
+                    status="error",
+                    info={"detail": "Empty channel name given"},
                 )
-                return
 
             self.channel_to_clients[channel].add(client_name)
             self.client_to_channels[client_name].add(channel)
-            await client.rsp_queue.put(
-                sch.ServerResponse(
-                    status="ok",
-                    info={
-                        "channel_name": channel,
-                        "total_subscribers": len(
-                            self.channel_to_clients[channel]
-                        ),
-                    },
-                )
+            return sch.ServerResponse(
+                status="ok",
+                info={
+                    "channel_name": channel,
+                    "total_subscribers": len(self.channel_to_clients[channel]),
+                },
             )
 
-    async def unsubscribe(self, client_name: str, req: sch.UnSubscribeRequest):
+    async def unsubscribe(
+        self, client_name: str, req: sch.UnSubscribeRequest
+    ) -> sch.ServerResponse:
         """
         Unsubscribe a client from a channel.
         """
@@ -102,29 +88,30 @@ class Dispatcher:
                     "Client name '%s' not found among existing clients",
                     client_name,
                 )
-                return
+                return sch.ServerResponse(
+                    status="error", info={"detail": "Client not found"}
+                )
 
             channel = req.params.channel_name
-            client = self.clients[client_name]
             if not channel:
                 logger.error(
                     "Empty channel name given!",
                 )
-                await client.rsp_queue.put(
-                    sch.ServerResponse(
-                        status="error", info={"detail": "Empty channel name"}
-                    )
+                return sch.ServerResponse(
+                    status="error", info={"detail": "Empty channel name"}
                 )
-                return
 
             self.channel_to_clients[channel].remove(client_name)
             self.client_to_channels[client_name].remove(channel)
-            await client.rsp_queue.put(sch.ServerResponse(status="ok"))
 
             if len(self.channel_to_clients[channel]) == 0:
                 self.channel_to_clients.pop(channel)
 
-    async def publish_msg(self, client_name: str, req: sch.SendRequest):
+        return sch.ServerResponse(status="ok")
+
+    async def publish_msg(
+        self, client_name: str, req: sch.SendRequest
+    ) -> sch.ServerResponse:
         """
         Publish a message from a client to a channel.
         """
@@ -136,23 +123,35 @@ class Dispatcher:
         )
         if client_name not in self.clients:
             logger.error("Unknown client name: %s", client_name)
-            return
+            return sch.ServerResponse(
+                status="error", info={"detail": "Unknown client name"}
+            )
 
         async with self.lock:
             channel = req.params.channel_name
             for subscriber in self.channel_to_clients[channel]:
+                if subscriber == client_name:
+                    continue
+
                 client = self.clients[subscriber]
                 runner.dispatch_task(client.publish_queue.put(msg))
                 logger.debug(
                     "Message dispatched to subscriber '%s'", subscriber
                 )
 
-    def initialize(self):
+        return sch.ServerResponse(status="ok")
+
+    async def client_listener(self, client_name: str, sock: WebSocket):
         """
-        Start running listener task in the background.
+        Listener process for sending published messages to clients.
         """
-        logger.debug("Initializing the dispatcher job...")
-        runner.dispatch_task(self.listen())
+        client = self.clients[client_name]
+        while True:
+            msg = await client.publish_queue.get()
+            logger.debug(
+                "Received message to publish to client '%s'", client_name
+            )
+            await sock.send_json(msg)
 
     async def remove_client(self, client_name: str):
         """

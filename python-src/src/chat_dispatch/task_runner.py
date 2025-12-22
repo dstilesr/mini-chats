@@ -19,9 +19,10 @@ class TaskRunner(metaclass=Singleton):
     tasks: set[asyncio.Task] = field(default_factory=set)
     lock: SLock = field(default_factory=Lock)
 
-    def dispatch_task(self, coro: Coroutine[None, None, None]):
+    def dispatch_task(self, coro: Coroutine[None, None, None]) -> str:
         """
-        Dispatches a coroutine to run in the background as a Task.
+        Dispatches a coroutine to run in the background as a Task. Returns
+        the task name.
         """
         task = asyncio.create_task(coro)
         with self.lock:
@@ -29,6 +30,7 @@ class TaskRunner(metaclass=Singleton):
             self.tasks.add(task)
 
         logger.debug("Dispatched task %s", task.get_name())
+        return task.get_name()
 
     def _remove_task(self, task: asyncio.Task):
         """
@@ -38,6 +40,19 @@ class TaskRunner(metaclass=Singleton):
             self.tasks.remove(task)
 
         logger.debug("Task %s exited", task.get_name())
+
+    def stop_task(self, task_id: str):
+        """
+        Stops a task by its ID.
+        """
+        with self.lock:
+            task = next(
+                (t for t in self.tasks if t.get_name() == task_id), None
+            )
+            if task:
+                task.cancel()
+
+        logger.debug("Stopped task %s", task_id)
 
 
 runner = TaskRunner()
