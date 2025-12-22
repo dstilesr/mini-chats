@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini Chat Client</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .section h2 {
+      margin-top: 0;
+      font-size: 1.1em;
+      color: #555;
+    }
+    label { display: block; margin-bottom: 4px; font-weight: 500; }
+    input, select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    input[type="text"] { width: 200px; }
+    button {
+      padding: 8px 16px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.danger { background: #dc3545; }
+    button.danger:hover { background: #b02a37; }
+    .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+    .field { display: flex; flex-direction: column; }
+    #status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    #status.connected { background: #d4edda; color: #155724; }
+    #status.disconnected { background: #f8d7da; color: #721c24; }
+    #messages {
+      height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      background: #fafafa;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .msg { margin-bottom: 8px; padding: 6px 8px; border-radius: 4px; }
+    .msg.incoming { background: #e3f2fd; }
+    .msg.outgoing { background: #fff3e0; }
+    .msg.system { background: #f3e5f5; font-style: italic; }
+    .msg.error { background: #ffebee; color: #c62828; }
+    .msg .meta { font-size: 11px; color: #666; margin-bottom: 2px; }
+    #subscriptions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-height: 30px;
+    }
+    .subscription-tag {
+      background: #e0e0e0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .subscription-tag .remove {
+      cursor: pointer;
+      color: #666;
+      font-weight: bold;
+    }
+    .subscription-tag .remove:hover { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>Mini Chat Client</h1>
+
+  <div class="section">
+    <h2>Connection</h2>
+    <div class="row">
+      <div class="field">
+        <label for="clientName">Client Name (optional)</label>
+        <input type="text" id="clientName" placeholder="Enter your name">
+      </div>
+      <button id="connectBtn" onclick="connect()">Connect</button>
+      <button id="disconnectBtn" class="danger" onclick="disconnect()" disabled>Disconnect</button>
+      <div id="status" class="disconnected">Disconnected</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Subscribe to Channel</h2>
+    <div class="row">
+      <div class="field">
+        <label for="subscribeChannel">Channel Name</label>
+        <input type="text" id="subscribeChannel" placeholder="general">
+      </div>
+      <button onclick="subscribe()" id="subscribeBtn" disabled>Subscribe</button>
+    </div>
+    <h3 style="font-size: 0.9em; color: #666;">Active Subscriptions</h3>
+    <div id="subscriptions"><em style="color: #999;">None</em></div>
+  </div>
+
+  <div class="section">
+    <h2>Send Message</h2>
+    <div class="row">
+      <div class="field">
+        <label for="publishChannel">Channel</label>
+        <select id="publishChannel" disabled>
+          <option value="">-- Subscribe first --</option>
+        </select>
+      </div>
+      <div class="field" style="flex: 1;">
+        <label for="messageContent">Message</label>
+        <input type="text" id="messageContent" placeholder="Type your message..." style="width: 100%;">
+      </div>
+      <button onclick="publish()" id="publishBtn" disabled>Send</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Messages</h2>
+    <button onclick="clearMessages()" style="margin-bottom: 10px; background: #6c757d;">Clear</button>
+    <div id="messages"></div>
+  </div>
+
+  <script src="client.js"></script>
+</body>
+</html>
