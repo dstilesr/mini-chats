@@ -47,6 +47,7 @@ tasks:
             --name '{{.LANGUAGE}}-minichat-container' \
             -p "3501:3501" \
             -d \
+            -e "APP_ENVIRONMENT=local"\
             {{.LANGUAGE}}-minichat:latest
 
   stop:

@@ -124,3 +124,40 @@ Basic confirgurations for the server will be given by the following environment 
 ## Implementations
 
 - [`Python`](./python-src/README.md)
+
+## Development with Taskfile
+
+This project uses [Task](https://taskfile.dev/) to simplify building and running the different implementations in containers.
+
+### Prerequisites
+
+- [Task](https://taskfile.dev/installation/) installed
+- Container engine: `podman` (default) or `docker`
+
+### Available Tasks
+
+| Task | Description |
+|------|-------------|
+| `start` | Build the image and start a container for a language implementation |
+| `stop` | Stop and remove the container and image for a language implementation |
+
+### Usage
+
+**Start an implementation:**
+```bash
+# Using podman (default)
+task start LANGUAGE=python
+
+# Using docker
+task start LANGUAGE=python ENGINE=docker
+```
+
+**Stop an implementation:**
+```bash
+task stop LANGUAGE=python
+
+# Or with docker
+task stop LANGUAGE=python ENGINE=docker
+```
+
+The container runs on port `3501` and sets `APP_ENVIRONMENT=local`.
