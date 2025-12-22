@@ -1,0 +1,66 @@
+version: "3"
+tasks:
+  build-image:
+    desc: Build the container image for a source version / language
+    requires:
+      vars:
+        - LANGUAGE
+    cmd: |
+      {{.ENGINE | default "podman"}} build \
+        -t {{.LANGUAGE}}-minichat:latest \
+        --file '{{.LANGUAGE}}-src/Dockerfile' .
+
+  remove-image:
+    desc: Remove image for cleanup use
+    internal: true
+    requires:
+      vars:
+        - LANGUAGE
+        - ENGINE
+
+    cmd: |
+      {{.ENGINE}} rmi  {{.LANGUAGE}}-minichat:latest
+
+  remove-container:
+    desc: Remove container for cleanup use
+    internal: true
+    requires:
+      vars:
+        - LANGUAGE
+        - ENGINE
+
+    cmd: |
+      {{.ENGINE}} rm -f {{.LANGUAGE}}-minichat-container
+
+  start:
+    desc: Start a language / version of the minichat in a container
+    requires:
+      vars:
+        - LANGUAGE
+    cmds:
+      - task: build-image
+        vars:
+          ENGINE: '{{.ENGINE | default "podman"}}'
+          LANGUAGE: "{{.LANGUAGE}}"
+      - |
+        {{.ENGINE | default "podman"}} run \
+            --name '{{.LANGUAGE}}-minichat-container' \
+            -p "3501:3501" \
+            -d \
+            {{.LANGUAGE}}-minichat:latest
+
+  stop:
+    desc: Stop a running instance / container
+    requires:
+      vars:
+        - LANGUAGE
+    cmds:
+      - task: remove-container
+        vars:
+          ENGINE: '{{.ENGINE | default "podman"}}'
+          LANGUAGE: "{{.LANGUAGE}}"
+
+      - task: remove-image
+        vars:
+          ENGINE: '{{.ENGINE | default "podman"}}'
+          LANGUAGE: "{{.LANGUAGE}}"
