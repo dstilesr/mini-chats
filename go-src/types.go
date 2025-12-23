@@ -47,3 +47,15 @@ type ClientMessage struct {
 	Action string `json:"action"`
 	Params Params `json:"params"`
 }
+
+// subscribeInfo contains information about a subscription for the client
+type subscribeInfo struct {
+	TotalSubs   int    `json:"total_subscribers"`
+	ChannelName string `json:"channel_name"`
+}
+
+// SubscribeResponse is a response sent to the client after a subscription
+type SubscribeResponse struct {
+	Status string        `json:"status"`
+	Info   subscribeInfo `json:"info"`
+}
