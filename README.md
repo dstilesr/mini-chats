@@ -11,7 +11,22 @@ for other projects. The servers will all include the same basic functionality:
   3. A client can publish a message to a channel they are subscribed to.
   4. A client will receive any messages sent to channels they are subscribed to.
   5. A client can unsubscribe from a channel.
-  
+
+## Table of Contents
+
+- [Message Specifications](#message-specifications)
+  - [Establish Connection](#establish-connection)
+  - [Subscribe to Channel](#subscribe-to-channel)
+  - [Send Message](#send-message)
+  - [Unsubscribe from Channel](#unsubscribe-from-channel)
+  - [Error Messages](#error-messages)
+- [Configurations](#configurations)
+- [Implementations](#implementations)
+- [Development with Taskfile](#development-with-taskfile)
+  - [Prerequisites](#prerequisites)
+  - [Available Tasks](#available-tasks)
+  - [Usage](#usage)
+
 ## Message Specifications
 
 The following API contracts will be used by all implementations. The endpoint to connect to the
@@ -122,6 +137,8 @@ Basic confirgurations for the server will be given by the following environment 
 - `APP_ENVIRONMENT` - Default: `dev`
 
 ## Implementations
+
+Each implementation includes a browser-based test application that you can use to interact with the service. Once the server is running, navigate to `http://localhost:<port>` or `http://localhost:<port>/index.html` (default port is `3501`) in your browser to access it.
 
 - [`Python`](./python-src/README.md)
 - [`Go`](./go-src/README.md)
