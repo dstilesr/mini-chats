@@ -124,6 +124,7 @@ Basic confirgurations for the server will be given by the following environment 
 ## Implementations
 
 - [`Python`](./python-src/README.md)
+- [`Go`](./go-src/README.md)
 
 ## Development with Taskfile
 
