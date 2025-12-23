@@ -12,6 +12,7 @@ FROM alpine:latest
 
 ENV APP_PORT=3501
 ENV APP_STATIC_PATH=/app/assets
+EXPOSE 3501
 
 WORKDIR /app
 
