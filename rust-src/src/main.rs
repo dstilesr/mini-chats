@@ -6,7 +6,7 @@ use application::Dispatcher;
 use axum::{
     Router,
     extract::Query,
-    extract::ws::{Message, Utf8Bytes, WebSocket, WebSocketUpgrade},
+    extract::ws::{Message, WebSocket, WebSocketUpgrade},
     response::IntoResponse,
     routing::any,
 };
@@ -78,30 +78,34 @@ async fn client_connection(
     client_name: String,
     dispatch: Arc<Mutex<Dispatcher>>,
 ) {
-    if let Err(s) = dispatch.lock().await.add_client(&client_name) {
+    let (chan_send, chan_recv) = mpsc::channel(32);
+    if let Err(s) = dispatch
+        .lock()
+        .await
+        .add_client(&client_name, chan_send.clone())
+    {
         log::error!("Failed to add client: {}", s);
         return;
     }
 
     log::info!("Client {} connected", client_name);
-    let (mut chan_send, mut chan_recv) = mpsc::channel(32);
 
     // Initial acknowledge message
-    let ack_str = serde_json::to_string(&ServerResponse {
+    let ack_msg = ServerResponse {
         status: "ok".to_string(),
         info: Some(ServerResponseInfo {
             client_name: Some(client_name.clone()),
             ..Default::default()
         }),
-    });
-    let json_str = match ack_str {
-        Ok(s) => s,
+    };
+    let msg = match Message::try_from(&ack_msg) {
         Err(e) => {
-            log::error!("Failed to serialize ServerResponse: {}", e);
+            log::error!("Failed to serialize message {}", e);
             return;
         }
+        Ok(m) => m,
     };
-    if let Err(e) = sock.send(Message::Text(Utf8Bytes::from(json_str))).await {
+    if let Err(e) = sock.send(msg).await {
         log::error!(
             "Failed to send initial message to client '{}': {}",
             client_name,
@@ -149,10 +153,16 @@ async fn socket_listener(
                     Ok(elem) => elem,
                 };
                 let mut dsp = dispatch.lock().await;
-                let response = dsp.process_message(user_msg, &client_name);
-                let rsp_json = Utf8Bytes::from(serde_json::to_string(&response).unwrap());
+                let response = dsp.process_message(user_msg, &client_name).await;
+                let out_msg = match Message::try_from(&response) {
+                    Ok(m) => m,
+                    Err(e) => {
+                        log::error!("Failed to convert response to message: {}", e);
+                        continue;
+                    }
+                };
                 drop(dsp);
-                if let Err(e) = channel.send(Message::Text(rsp_json)).await {
+                if let Err(e) = channel.send(out_msg).await {
                     log::error!("Could not send response to client '{}': {}", client_name, e);
                     break;
                 };

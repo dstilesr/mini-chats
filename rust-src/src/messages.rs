@@ -1,3 +1,4 @@
+use axum::extract::ws::Message;
 use rand::{Rng, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
 
@@ -67,6 +68,15 @@ impl Default for ServerResponse {
     }
 }
 
+impl TryFrom<&ServerResponse> for Message {
+    type Error = serde_json::Error;
+
+    fn try_from(value: &ServerResponse) -> serde_json::Result<Self> {
+        let json_str = serde_json::to_string(value)?;
+        Ok(Self::text(json_str))
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct PublishedMessage {
     pub sender: String,
@@ -88,14 +98,21 @@ impl PublishedMessage {
     }
 }
 
+impl TryFrom<&PublishedMessage> for Message {
+    type Error = serde_json::Error;
+
+    fn try_from(value: &PublishedMessage) -> serde_json::Result<Self> {
+        let json_str = serde_json::to_string(value)?;
+        Ok(Self::text(json_str))
+    }
+}
+
 /// Query parameters for opening new connection
-#[derive(Deserialize, Debug)]
-#[derive(Default)]
+#[derive(Deserialize, Debug, Default)]
 pub struct ConnectParams {
     #[serde(default)]
     pub client_name: Option<String>,
 }
-
 
 /// Generate a random alphanumeric string to use as client name
 pub fn random_client_name(length: usize) -> String {
