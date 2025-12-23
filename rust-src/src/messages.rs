@@ -19,7 +19,7 @@ pub enum ClientMessage {
 }
 
 /// Information contained in a server response to a client message
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct ServerResponseInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<String>,
@@ -31,18 +31,7 @@ pub struct ServerResponseInfo {
     pub client_name: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_subscribers: Option<u32>,
-}
-
-impl Default for ServerResponseInfo {
-    fn default() -> Self {
-        Self {
-            detail: None,
-            channel_name: None,
-            client_name: None,
-            total_subscribers: None,
-        }
-    }
+    pub total_subscribers: Option<usize>,
 }
 
 /// Response from the server to a client message

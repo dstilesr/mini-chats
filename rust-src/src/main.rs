@@ -2,9 +2,9 @@ mod application;
 mod messages;
 mod settings;
 
+use application::Dispatcher;
 use axum::{
     Router,
-    body::Bytes,
     extract::Query,
     extract::ws::{Message, Utf8Bytes, WebSocket, WebSocketUpgrade},
     response::IntoResponse,
@@ -15,12 +15,14 @@ use messages::*;
 use serde_json;
 use settings::AppSettings;
 use simple_logger::SimpleLogger;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() {
+    // Logging setup
     let settings = AppSettings::new();
-
     let log_level = match settings.log_level.to_uppercase().trim() {
         "DEBUG" => log::LevelFilter::Debug,
         "INFO" => log::LevelFilter::Info,
@@ -29,14 +31,18 @@ async fn main() {
         "ERROR" => log::LevelFilter::Error,
         _ => panic!("Unknown log level!"),
     };
-
     SimpleLogger::new().with_level(log_level).init().unwrap();
+
+    let dispatcher = Arc::new(Mutex::new(Dispatcher::new()));
 
     let router = Router::new()
         .fallback_service(
             ServeDir::new(&settings.static_path).append_index_html_on_directories(true),
         )
-        .route("/api/connect", any(handle_socket));
+        .route(
+            "/api/connect",
+            any(move |ws, qry| handle_socket(ws, qry, Arc::clone(&dispatcher))),
+        );
 
     println!("Application Settings: {settings:?}");
 
@@ -48,17 +54,30 @@ async fn main() {
 }
 
 /// Handle socket upgrade
-async fn handle_socket(ws: WebSocketUpgrade, qry: Query<ConnectParams>) -> impl IntoResponse {
+async fn handle_socket(
+    ws: WebSocketUpgrade,
+    qry: Query<ConnectParams>,
+    dispatch: Arc<Mutex<Dispatcher>>,
+) -> impl IntoResponse {
     let mut client_name = qry.0.client_name.unwrap_or_else(|| random_client_name(28));
     if client_name.trim().is_empty() {
         log::debug!("Client name empty - generating random name");
         client_name = random_client_name(28);
     }
-    ws.on_upgrade(move |socket| client_connection(socket, client_name))
+    ws.on_upgrade(move |socket| client_connection(socket, client_name, dispatch))
 }
 
 /// Handle the connection to a client via socket
-async fn client_connection(mut sock: WebSocket, client_name: String) {
+async fn client_connection(
+    mut sock: WebSocket,
+    client_name: String,
+    dispatch: Arc<Mutex<Dispatcher>>,
+) {
+    if let Err(s) = dispatch.lock().await.add_client(&client_name) {
+        log::error!("Failed to add client: {}", s);
+        return;
+    }
+
     log::info!("Client {} connected", client_name);
 
     // Initial acknowledge message
@@ -89,20 +108,28 @@ async fn client_connection(mut sock: WebSocket, client_name: String) {
     while let Some(msg) = sock.recv().await {
         match msg {
             Err(e) => {
-                log::error!("Socket disconnected for client '{}': {}", client_name, e);
+                log::error!("Socket disconnected for client: {}", e);
                 break;
             }
             Ok(msg) => match msg {
                 Message::Text(t) => {
                     let user_msg: ClientMessage = match serde_json::from_str(&t) {
-                        Ok(elem) => elem,
                         Err(e) => {
                             log::error!("Failed to parse client message: {}", e);
                             break;
                         }
+                        Ok(elem) => elem,
                     };
-                    println!("Client message: {user_msg:?}")
+                    let mut dsp = dispatch.lock().await;
+                    let response = dsp.process_message(user_msg, &client_name);
+                    let rsp_json = Utf8Bytes::from(serde_json::to_string(&response).unwrap());
+                    drop(dsp);
+                    if let Err(e) = sock.send(Message::Text(rsp_json)).await {
+                        log::error!("Could not send response to client '{}': {}", client_name, e);
+                        break;
+                    };
                 }
+                // Other message types
                 _ => continue,
             },
         }

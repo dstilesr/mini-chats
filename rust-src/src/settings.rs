@@ -8,7 +8,7 @@ pub struct AppSettings {
     pub static_path: String,
     pub log_level: String,
     pub environment: String,
-    pub version: &'static str,
+    pub version: String,
 }
 
 impl Default for AppSettings {
@@ -18,7 +18,7 @@ impl Default for AppSettings {
             static_path: "assets".to_string(),
             log_level: "INFO".to_string(),
             environment: "dev".to_string(),
-            version: VERSION,
+            version: VERSION.to_string(),
         }
     }
 }
@@ -31,6 +31,7 @@ impl AppSettings {
         let static_path = env::var("APP_STATIC_PATH").unwrap_or(default.static_path);
         let environment = env::var("APP_ENVIRONMENT").unwrap_or(default.environment);
         let log_level = env::var("APP_LOG_LEVEL").unwrap_or(default.log_level);
+        let version = env::var("APP_VERSION").unwrap_or(default.version);
 
         let port = port_str
             .unwrap_or(format!("{}", default.port))
@@ -42,7 +43,7 @@ impl AppSettings {
             environment,
             port,
             log_level,
-            version: VERSION,
+            version,
         }
     }
 }
