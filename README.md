@@ -125,6 +125,7 @@ Basic confirgurations for the server will be given by the following environment 
 
 - [`Python`](./python-src/README.md)
 - [`Go`](./go-src/README.md)
+- [`Rust`](./rust-src/README.md)
 
 ## Development with Taskfile
 
