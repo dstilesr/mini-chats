@@ -21,3 +21,6 @@ python-src/*[\-_]cache
 .idea/
 .zed/
 .vscode/
+
+# Rust
+**/target/
