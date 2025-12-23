@@ -1,8 +1,9 @@
 use chrono;
+use rand::{Rng, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "action", content = "info")]
+#[serde(tag = "action", content = "params")]
 pub enum ClientMessage {
     #[serde(rename = "subscribe")]
     Subscribe { channel_name: String },
@@ -31,6 +32,17 @@ pub struct ServerResponseInfo {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_subscribers: Option<u32>,
+}
+
+impl Default for ServerResponseInfo {
+    fn default() -> Self {
+        Self {
+            detail: None,
+            channel_name: None,
+            client_name: None,
+            total_subscribers: None,
+        }
+    }
 }
 
 /// Response from the server to a client message
@@ -86,4 +98,27 @@ impl PublishedMessage {
             sent_at,
         }
     }
+}
+
+/// Query parameters for opening new connection
+#[derive(Deserialize, Debug)]
+pub struct ConnectParams {
+    #[serde(default)]
+    pub client_name: Option<String>,
+}
+
+impl Default for ConnectParams {
+    fn default() -> Self {
+        Self { client_name: None }
+    }
+}
+
+/// Generate a random alphanumeric string to use as client name
+pub fn random_client_name(length: usize) -> String {
+    let mut out = Vec::with_capacity(length);
+    let mut rng = rand::rng();
+    for _ in 0..length {
+        out.push(rng.sample(Alphanumeric));
+    }
+    String::from_utf8(out).unwrap()
 }

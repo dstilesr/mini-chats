@@ -25,7 +25,7 @@ func (a *Application) SetUpRoutes() error {
 	mux.Handle("/", fs)
 
 	a.Server = http.Server{
-		Addr:    fmt.Sprintf(":%d", a.AppSettings.Port),
+		Addr:    fmt.Sprintf("0.0.0.0:%d", a.AppSettings.Port),
 		Handler: mux,
 	}
 	return nil
