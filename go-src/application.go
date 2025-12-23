@@ -146,7 +146,7 @@ func (a *Application) SubscribeClient(client, channel string) (int, error) {
 
 	a.ClientToChannel[client][channel] = true
 	a.ChannelToClient[channel][client] = true
-	slog.Info("Client subscribed", "client", client, "channel", channel)
+	slog.Debug("Client subscribed", "client", client, "channel", channel)
 	return len(a.ChannelToClient[channel]), nil
 }
 
@@ -170,7 +170,7 @@ func (a *Application) UnSubscribeClient(client, channel string) error {
 		slog.Debug("Deleting empty channel", "channel", channel)
 		delete(a.ChannelToClient, channel)
 	}
-	slog.Info("Client unsubscribed", "client", client, "channel", channel)
+	slog.Debug("Client unsubscribed", "client", client, "channel", channel)
 	return nil
 }
 
@@ -250,7 +250,7 @@ func SendWithTimeout[T any](c chan<- T, value T) {
 	to := time.After(SendTimeout)
 	select {
 	case c <- value:
-		slog.Info("Message dispatched")
+		slog.Debug("Message dispatched")
 	case <-to:
 		slog.Error("Message dispatch timed out!")
 	}

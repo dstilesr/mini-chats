@@ -113,6 +113,7 @@ func (a *Application) HandleClientSocket(res http.ResponseWriter, req *http.Requ
 			break
 		}
 	}
+	slog.Info("Stopped Client Listener", "client", clientName)
 }
 
 // Generate a random client name
@@ -137,5 +138,5 @@ func ListenAndPublish(c <-chan *PublishedMessage, socket *websocket.Conn) {
 			break
 		}
 	}
-	slog.Info("Stopped Client Listener")
+	slog.Debug("Stopped Client Message Listener")
 }
