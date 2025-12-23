@@ -132,4 +132,9 @@ async fn client_connection(
             },
         }
     }
+
+    // Listener loop exited - remove client
+    let mut dsp = dispatch.lock().await;
+    dsp.remove_client(&client_name);
+    log::info!("Client {} disconnected", client_name);
 }

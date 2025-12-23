@@ -27,6 +27,14 @@ impl Dispatcher {
         Ok(())
     }
 
+    /// Remove a client from the application
+    pub fn remove_client(&mut self, client: &str) {
+        self.client_to_channels.remove(client);
+        for (_, v) in self.channel_to_clients.iter_mut() {
+            v.remove(client);
+        }
+    }
+
     /// Subscribe a client to a channel
     pub fn subscribe(&mut self, client: &str, channel: String) -> ServerResponse {
         log::info!("Client {} subscribing to channel {}", client, channel);
