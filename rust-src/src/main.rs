@@ -10,11 +10,15 @@ use axum::{
     response::IntoResponse,
     routing::any,
 };
+use futures_util::{
+    sink::SinkExt,
+    stream::{SplitSink, SplitStream, StreamExt},
+};
 use messages::*;
 use settings::AppSettings;
 use simple_logger::SimpleLogger;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, mpsc};
 use tower_http::services::ServeDir;
 
 #[tokio::main]
@@ -42,9 +46,12 @@ async fn main() {
             any(move |ws, qry| handle_socket(ws, qry, Arc::clone(&dispatcher))),
         );
 
-    println!("Application Settings: {settings:?}");
-
-    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", settings.port))
+    log::info!(
+        "Starting mini chat server on port {}. Version: {}",
+        settings.port,
+        settings.version
+    );
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", settings.port))
         .await
         .unwrap();
 
@@ -77,6 +84,7 @@ async fn client_connection(
     }
 
     log::info!("Client {} connected", client_name);
+    let (mut chan_send, mut chan_recv) = mpsc::channel(32);
 
     // Initial acknowledge message
     let ack_str = serde_json::to_string(&ServerResponse {
@@ -101,35 +109,56 @@ async fn client_connection(
         );
         return;
     };
+    let (sender, receiver) = sock.split();
 
-    // Listen for client messages
-    while let Some(msg) = sock.recv().await {
+    // Forwarder to send messages to client
+    tokio::spawn(async move { forward_to_socket(chan_recv, sender).await });
+
+    // Listen to messages from client
+    tokio::spawn(async move { socket_listener(dispatch, client_name, chan_send, receiver).await });
+}
+
+/// Listener task to receive messages from an MPSC channel and forward them to the socket
+async fn forward_to_socket(
+    mut listener: mpsc::Receiver<Message>,
+    mut sock: SplitSink<WebSocket, Message>,
+) {
+    while let Some(msg) = listener.recv().await {
+        if let Err(e) = sock.send(msg).await {
+            log::error!("Unable to send message to socket: {}", e);
+            break;
+        }
+    }
+    log::debug!("Forwarder task exited");
+}
+
+async fn socket_listener(
+    dispatch: Arc<Mutex<Dispatcher>>,
+    client_name: String,
+    channel: mpsc::Sender<Message>,
+    mut sock: SplitStream<WebSocket>,
+) {
+    while let Some(Ok(msg)) = sock.next().await {
         match msg {
-            Err(e) => {
-                log::error!("Socket disconnected for client: {}", e);
-                break;
-            }
-            Ok(msg) => match msg {
-                Message::Text(t) => {
-                    let user_msg: ClientMessage = match serde_json::from_str(&t) {
-                        Err(e) => {
-                            log::error!("Failed to parse client message: {}", e);
-                            break;
-                        }
-                        Ok(elem) => elem,
-                    };
-                    let mut dsp = dispatch.lock().await;
-                    let response = dsp.process_message(user_msg, &client_name);
-                    let rsp_json = Utf8Bytes::from(serde_json::to_string(&response).unwrap());
-                    drop(dsp);
-                    if let Err(e) = sock.send(Message::Text(rsp_json)).await {
-                        log::error!("Could not send response to client '{}': {}", client_name, e);
+            Message::Text(t) => {
+                let user_msg: ClientMessage = match serde_json::from_str(&t) {
+                    Err(e) => {
+                        log::error!("Failed to parse client message: {}", e);
                         break;
-                    };
-                }
-                // Other message types
-                _ => continue,
-            },
+                    }
+                    Ok(elem) => elem,
+                };
+                let mut dsp = dispatch.lock().await;
+                let response = dsp.process_message(user_msg, &client_name);
+                let rsp_json = Utf8Bytes::from(serde_json::to_string(&response).unwrap());
+                drop(dsp);
+                if let Err(e) = channel.send(Message::Text(rsp_json)).await {
+                    log::error!("Could not send response to client '{}': {}", client_name, e);
+                    break;
+                };
+            }
+            // Other message types
+            _ => continue,
         }
     }
 
