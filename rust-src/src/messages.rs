@@ -17,7 +17,57 @@ pub enum ClientMessage {
     },
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+/// Information contained in a server response to a client message
+#[derive(Debug, Serialize)]
+pub struct ServerResponseInfo {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub channel_name: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_name: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_subscribers: Option<u32>,
+}
+
+/// Response from the server to a client message
+#[derive(Debug, Serialize)]
+pub struct ServerResponse {
+    pub status: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub info: Option<ServerResponseInfo>,
+}
+
+impl<T: std::fmt::Display> From<T> for ServerResponse {
+    /// Utility to create response from error object / string
+    fn from(value: T) -> Self {
+        Self {
+            status: "error".to_string(),
+            info: Some(ServerResponseInfo {
+                detail: Some(format!("Error encountered: {}", value)),
+                total_subscribers: None,
+                channel_name: None,
+                client_name: None,
+            }),
+        }
+    }
+}
+
+impl Default for ServerResponse {
+    /// Default simple success response
+    fn default() -> Self {
+        Self {
+            status: "ok".to_string(),
+            info: None,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
 pub struct PublishedMessage {
     pub sender: String,
     pub channel_name: String,
