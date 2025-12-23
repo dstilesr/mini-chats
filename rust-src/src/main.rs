@@ -10,9 +10,7 @@ use axum::{
     response::IntoResponse,
     routing::any,
 };
-use log;
 use messages::*;
-use serde_json;
 use settings::AppSettings;
 use simple_logger::SimpleLogger;
 use std::sync::Arc;

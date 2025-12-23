@@ -42,7 +42,7 @@ impl Dispatcher {
                 let total_prev = self.channel_to_clients.get(&channel).map_or(0, |s| s.len());
                 self.channel_to_clients
                     .entry(channel)
-                    .or_insert_with(HashSet::new)
+                    .or_default()
                     .insert(client.to_string());
                 total_prev + 1
             }
@@ -73,7 +73,7 @@ impl Dispatcher {
         if self
             .channel_to_clients
             .get(&channel)
-            .map_or(true, |s| s.is_empty())
+            .is_none_or(|s| s.is_empty())
         {
             // Cleanup empty channel
             log::debug!("Removing empty channel {}", channel);

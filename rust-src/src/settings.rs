@@ -1,6 +1,6 @@
 use std::env;
 
-const VERSION: &'static str = "v0.1.0";
+const VERSION: &str = "v0.1.0";
 
 #[derive(Debug)]
 pub struct AppSettings {

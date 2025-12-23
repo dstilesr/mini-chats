@@ -1,4 +1,3 @@
-use chrono;
 use rand::{Rng, distr::Alphanumeric};
 use serde::{Deserialize, Serialize};
 
@@ -91,16 +90,12 @@ impl PublishedMessage {
 
 /// Query parameters for opening new connection
 #[derive(Deserialize, Debug)]
+#[derive(Default)]
 pub struct ConnectParams {
     #[serde(default)]
     pub client_name: Option<String>,
 }
 
-impl Default for ConnectParams {
-    fn default() -> Self {
-        Self { client_name: None }
-    }
-}
 
 /// Generate a random alphanumeric string to use as client name
 pub fn random_client_name(length: usize) -> String {
