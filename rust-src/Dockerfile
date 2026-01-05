@@ -2,9 +2,7 @@ FROM rust:1-alpine AS builder
 
 WORKDIR /app
 
-COPY rust-src/Cargo.toml .
-COPY rust-src/Cargo.lock .
-COPY rust-src/src ./src
+COPY rust-src .
 
 RUN cargo build --release
 
