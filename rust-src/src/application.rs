@@ -116,7 +116,18 @@ impl Dispatcher {
         match self.channel_to_clients.get(&channel) {
             None => return ServerResponse::from(format!("Channel '{}' not found!", channel)),
             Some(clients) => {
+                if !clients.contains(sender) {
+                    return ServerResponse::from(format!(
+                        "Sender '{}' not found in channel '{}'",
+                        sender, channel
+                    ));
+                }
+
                 for c in clients {
+                    if c == sender {
+                        // Don't send to self
+                        continue;
+                    }
                     if let Some(snd) = self.client_sinks.get(c) {
                         if let Err(e) = snd.send(msg.clone()).await {
                             log::error!("Failed to send message to client '{}': {}", c, e);
