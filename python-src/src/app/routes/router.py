@@ -47,6 +47,10 @@ async def handle_connection(
                     rsp = await dispatch_handler.subscribe(client_id, parsed)
                 case sch.UnSubscribeRequest:
                     rsp = await dispatch_handler.unsubscribe(client_id, parsed)
+                case sch.ListRequest:
+                    rsp = await dispatch_handler.list_subscribed_channels(
+                        client_id
+                    )
                 case _:
                     logger.error(
                         "Unknown type of request: [%s.%s]",

@@ -75,5 +75,13 @@ class UnSubscribeRequest(BaseModel):
     params: UnSubscribeParams
 
 
-RequestType = UnSubscribeRequest | SubscribeRequest | SendRequest
+class ListRequest(BaseModel):
+    """
+    Request to list the channels a client is subscribed to.
+    """
+
+    action: Literal["list"] = "list"
+
+
+RequestType = UnSubscribeRequest | SubscribeRequest | SendRequest | ListRequest
 RequestAdapter = TypeAdapter(RequestType)

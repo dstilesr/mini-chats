@@ -118,6 +118,24 @@ The server will send a confirmation with this schema:
 }
 ```
 
+### List Subscribed Channels
+To list the channels the client is subscribed to, send the following:
+```json
+{
+  "action": "list"
+}
+```
+
+The server will respond with this schema:
+```json
+{
+  "status": "ok",
+  "info": {
+    "channels": ["<channel name>"],
+  }
+}
+```
+
 ### Error Messages
 When a message sent by a client is invalid or results in an error on the server, the server will
 send a response in this format:

@@ -141,6 +141,22 @@ class Dispatcher:
 
         return sch.ServerResponse(status="ok")
 
+    async def list_subscribed_channels(
+        self, client_name: str
+    ) -> sch.ServerResponse:
+        """
+        List the channels the user is subscribed to.
+        """
+        async with self.lock:
+            if client_name not in self.clients:
+                return sch.ServerResponse(
+                    status="error", info={"detail": "Unknown client name"}
+                )
+
+            channels = list(self.client_to_channels.get(client_name, set()))
+            channels.sort()
+            return sch.ServerResponse(status="ok", info={"channels": channels})
+
     async def client_listener(self, client_name: str, sock: WebSocket):
         """
         Listener process for sending published messages to clients.
