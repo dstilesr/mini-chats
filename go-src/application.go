@@ -226,6 +226,10 @@ func (a *Application) Publish(sender, channel, content string) error {
 		return fmt.Errorf("Channel %s does not exist", channel)
 	}
 
+	if _, ok := sendTo[sender]; !ok {
+		return fmt.Errorf("Sender %s not found in channel %s", sender, channel)
+	}
+
 	msg := NewMessage(sender, channel, content)
 	for subscriber, _ := range sendTo {
 		if subscriber == sender {
