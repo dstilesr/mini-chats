@@ -59,3 +59,14 @@ type SubscribeResponse struct {
 	Status string        `json:"status"`
 	Info   subscribeInfo `json:"info"`
 }
+
+// ListResponse is a response sent to the client after a list channels request
+type ListResponse struct {
+	Status string   `json:"status"`
+	Info   listInfo `json:"info"`
+}
+
+// listInfo contains information about the channels the client is subscribed to
+type listInfo struct {
+	Channels []string `json:"channels"`
+}

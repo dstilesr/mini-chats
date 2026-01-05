@@ -249,6 +249,22 @@ func (a *Application) Publish(sender, channel, content string) error {
 	return nil
 }
 
+// ListChannels returns a list of channels the client is subscribed to
+func (a *Application) ListChannels(clientId string) ([]string, error) {
+	a.lock.RLock()
+	defer a.lock.RUnlock()
+
+	chans, ok := a.ClientToChannel[clientId]
+	if !ok {
+		return []string{}, fmt.Errorf("Client %s not found", clientId)
+	}
+	out := make([]string, 0, len(chans))
+	for channel, _ := range chans {
+		out = append(out, channel)
+	}
+	return out, nil
+}
+
 // SendWithTimeout sends a message to a channel with a timeout
 func SendWithTimeout[T any](c chan<- T, value T) {
 	to := time.After(SendTimeout)
