@@ -16,6 +16,9 @@ pub enum ClientMessage {
         channel_name: String,
         content: String,
     },
+
+    #[serde(rename = "list")]
+    List,
 }
 
 /// Information contained in a server response to a client message
@@ -32,6 +35,9 @@ pub struct ServerResponseInfo {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_subscribers: Option<usize>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub channels: Option<Vec<String>>,
 }
 
 /// Response from the server to a client message
@@ -53,6 +59,7 @@ impl<T: std::fmt::Display> From<T> for ServerResponse {
                 total_subscribers: None,
                 channel_name: None,
                 client_name: None,
+                channels: None,
             }),
         }
     }

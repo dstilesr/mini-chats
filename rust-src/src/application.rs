@@ -101,6 +101,24 @@ impl Dispatcher {
         ServerResponse::default()
     }
 
+    /// List the channels the client is subscribed to.
+    pub fn list_channels(&self, client_id: &str) -> ServerResponse {
+        match self.client_to_channels.get(client_id) {
+            None => ServerResponse::from(format!("Client {} not found", client_id)),
+            Some(chans) => {
+                let mut channels: Vec<String> = chans.iter().map(|s| s.to_string()).collect();
+                channels.sort();
+                ServerResponse {
+                    status: "ok".to_string(),
+                    info: Some(ServerResponseInfo {
+                        channels: Some(channels),
+                        ..ServerResponseInfo::default()
+                    }),
+                }
+            }
+        }
+    }
+
     pub async fn publish_message(
         &self,
         sender: &str,
@@ -151,6 +169,7 @@ impl Dispatcher {
                 channel_name,
                 content,
             } => self.publish_message(client, channel_name, content).await,
+            ClientMessage::List => self.list_channels(client),
         }
     }
 }
