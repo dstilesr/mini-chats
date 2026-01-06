@@ -1,20 +1,20 @@
 let ws = null;
-const subscriptions = new Set();
 
 // DOM elements
 const statusEl = document.getElementById('status');
-const messagesEl = document.getElementById('messages');
+const chatMessagesEl = document.getElementById('chat-messages');
+const systemMessagesEl = document.getElementById('system-messages');
 const subscriptionsEl = document.getElementById('subscriptions');
 const publishChannelEl = document.getElementById('publishChannel');
 const connectBtn = document.getElementById('connectBtn');
 const disconnectBtn = document.getElementById('disconnectBtn');
 const subscribeBtn = document.getElementById('subscribeBtn');
+const refreshBtn = document.getElementById('refreshBtn');
 const publishBtn = document.getElementById('publishBtn');
 
 function connect() {
   const clientName = document.getElementById('clientName').value.trim();
 
-  // Build WebSocket URL - connect to same host
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   let url = `${protocol}//${window.location.host}/api/connect`;
 
@@ -26,7 +26,7 @@ function connect() {
 
   ws.onopen = () => {
     setConnected(true);
-    addMessage('system', 'Connected to server');
+    addMessage('system', 'system', 'Connected to server');
   };
 
   ws.onmessage = (event) => {
@@ -34,19 +34,18 @@ function connect() {
       const data = JSON.parse(event.data);
       handleServerMessage(data);
     } catch (e) {
-      addMessage('error', `Failed to parse message: ${event.data}`);
+      addMessage('system', 'error', `Failed to parse message: ${event.data}`);
     }
   };
 
   ws.onclose = () => {
     setConnected(false);
-    addMessage('system', 'Disconnected from server');
-    subscriptions.clear();
-    updateSubscriptionsUI();
+    addMessage('system', 'system', 'Disconnected from server');
+    updateSubscriptionsUI([]);
   };
 
-  ws.onerror = (error) => {
-    addMessage('error', 'WebSocket error occurred');
+  ws.onerror = () => {
+    addMessage('system', 'error', 'WebSocket error occurred');
   };
 }
 
@@ -63,70 +62,66 @@ function setConnected(connected) {
   connectBtn.disabled = connected;
   disconnectBtn.disabled = !connected;
   subscribeBtn.disabled = !connected;
-  publishBtn.disabled = !connected || subscriptions.size === 0;
+  refreshBtn.disabled = !connected;
   document.getElementById('clientName').disabled = connected;
 }
 
 function handleServerMessage(data) {
-  // Check if it's a chat message (has sender, channel_name, content, sent_at)
+  // Chat message (has sender, channel_name, content, sent_at)
   if (data.sender && data.channel_name && data.content && data.sent_at) {
     const time = new Date(data.sent_at).toLocaleTimeString();
-    addMessage('incoming', `[${time}] #${data.channel_name} - ${data.sender}: ${data.content}`);
+    addMessage('chat', 'incoming', `[${time}] #${data.channel_name} - ${data.sender}: ${data.content}`);
     return;
   }
 
-  // Otherwise it's a response/status message
+  // Response/status message
   if (data.status === 'ok') {
     if (data.info) {
       if (data.info.client_name) {
-        addMessage('system', `Connected as: ${data.info.client_name}`);
+        addMessage('system', 'system', `Connected as: ${data.info.client_name}`);
       }
       if (data.info.channel_name && data.info.total_subscribers !== undefined) {
-        addMessage('system', `Subscribed to #${data.info.channel_name} (${data.info.total_subscribers} subscribers)`);
+        addMessage('system', 'system', `Subscribed to #${data.info.channel_name} (${data.info.total_subscribers} subscribers)`);
+        refreshChannels();
+      }
+      if (data.info.channels !== undefined) {
+        updateSubscriptionsUI(data.info.channels);
       }
     } else {
-      addMessage('system', 'OK');
+      addMessage('system', 'system', 'OK');
     }
   } else if (data.status === 'error') {
     const detail = data.info?.detail || 'Unknown error';
-    addMessage('error', `Error: ${detail}`);
+    addMessage('system', 'error', `Error: ${detail}`);
   } else {
-    // Unknown message format, just display it
-    addMessage('incoming', JSON.stringify(data, null, 2));
+    addMessage('system', 'incoming', JSON.stringify(data, null, 2));
   }
 }
 
 function subscribe() {
   const channel = document.getElementById('subscribeChannel').value.trim();
   if (!channel) {
-    addMessage('error', 'Please enter a channel name');
+    addMessage('system', 'error', 'Please enter a channel name');
     return;
   }
 
-  const msg = {
+  sendMessage({
     action: 'subscribe',
-    params: {
-      channel_name: channel
-    }
-  };
-
-  sendMessage(msg);
-  subscriptions.add(channel);
-  updateSubscriptionsUI();
+    params: { channel_name: channel }
+  });
   document.getElementById('subscribeChannel').value = '';
 }
 
 function unsubscribe(channel) {
-  const msg = {
+  sendMessage({
     action: 'unsubscribe',
-    params: {
-      channel_name: channel
-    }
-  };
+    params: { channel_name: channel }
+  });
+  refreshChannels();
+}
 
-  sendMessage(msg);
-  subscriptions.delete(channel);
-  updateSubscriptionsUI();
+function refreshChannels() {
+  sendMessage({ action: 'list' });
 }
 
 function publish() {
@@ -134,24 +129,19 @@ function publish() {
   const content = document.getElementById('messageContent').value.trim();
 
   if (!channel) {
-    addMessage('error', 'Please select a channel');
+    addMessage('system', 'error', 'Please select a channel');
     return;
   }
   if (!content) {
-    addMessage('error', 'Please enter a message');
+    addMessage('system', 'error', 'Please enter a message');
     return;
   }
 
-  const msg = {
+  sendMessage({
     action: 'publish',
-    params: {
-      channel_name: channel,
-      content: content
-    }
-  };
-
-  sendMessage(msg);
-  addMessage('outgoing', `[Sent to #${channel}]: ${content}`);
+    params: { channel_name: channel, content: content }
+  });
+  addMessage('chat', 'outgoing', `[Sent to #${channel}]: ${content}`);
   document.getElementById('messageContent').value = '';
 }
 
@@ -159,12 +149,12 @@ function sendMessage(msg) {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(msg));
   } else {
-    addMessage('error', 'Not connected to server');
+    addMessage('system', 'error', 'Not connected to server');
   }
 }
 
-function updateSubscriptionsUI() {
-  if (subscriptions.size === 0) {
+function updateSubscriptionsUI(channels) {
+  if (!channels || channels.length === 0) {
     subscriptionsEl.innerHTML = '<em style="color: #999;">None</em>';
     publishChannelEl.innerHTML = '<option value="">-- Subscribe first --</option>';
     publishChannelEl.disabled = true;
@@ -173,14 +163,12 @@ function updateSubscriptionsUI() {
     subscriptionsEl.innerHTML = '';
     publishChannelEl.innerHTML = '';
 
-    subscriptions.forEach(channel => {
-      // Add tag to subscriptions display
+    channels.forEach(channel => {
       const tag = document.createElement('span');
       tag.className = 'subscription-tag';
       tag.innerHTML = `#${channel} <span class="remove" onclick="unsubscribe('${channel}')">&times;</span>`;
       subscriptionsEl.appendChild(tag);
 
-      // Add option to publish dropdown
       const option = document.createElement('option');
       option.value = channel;
       option.textContent = `#${channel}`;
@@ -194,19 +182,30 @@ function updateSubscriptionsUI() {
   }
 }
 
-function addMessage(type, text) {
+function switchTab(tabName) {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.tab === tabName);
+  });
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.toggle('active', content.id === `${tabName}-messages`);
+  });
+}
+
+function addMessage(tab, type, text) {
+  const container = tab === 'chat' ? chatMessagesEl : systemMessagesEl;
   const div = document.createElement('div');
   div.className = `msg ${type}`;
 
   const now = new Date().toLocaleTimeString();
   div.innerHTML = `<div class="meta">${now}</div>${escapeHtml(text)}`;
 
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
 }
 
-function clearMessages() {
-  messagesEl.innerHTML = '';
+function clearMessages(tab) {
+  const container = tab === 'chat' ? chatMessagesEl : systemMessagesEl;
+  container.innerHTML = '';
 }
 
 function escapeHtml(text) {
@@ -215,15 +214,10 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Allow sending message with Enter key
 document.getElementById('messageContent').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    publish();
-  }
+  if (e.key === 'Enter') publish();
 });
 
 document.getElementById('subscribeChannel').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    subscribe();
-  }
+  if (e.key === 'Enter') subscribe();
 });

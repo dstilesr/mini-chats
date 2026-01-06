@@ -47,6 +47,8 @@
     button:disabled { background: #ccc; cursor: not-allowed; }
     button.danger { background: #dc3545; }
     button.danger:hover { background: #b02a37; }
+    button.secondary { background: #6c757d; }
+    button.secondary:hover { background: #545b62; }
     .row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
     .field { display: flex; flex-direction: column; }
     #status {
@@ -56,7 +58,29 @@
     }
     #status.connected { background: #d4edda; color: #155724; }
     #status.disconnected { background: #f8d7da; color: #721c24; }
-    #messages {
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid #ddd;
+      margin-bottom: 10px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+    }
+    .tab:hover { color: #333; }
+    .tab.active {
+      color: #007bff;
+      border-bottom-color: #007bff;
+    }
+    .tab-content {
+      display: none;
       height: 300px;
       overflow-y: auto;
       border: 1px solid #ddd;
@@ -66,10 +90,11 @@
       font-family: monospace;
       font-size: 13px;
     }
+    .tab-content.active { display: block; }
     .msg { margin-bottom: 8px; padding: 6px 8px; border-radius: 4px; }
     .msg.incoming { background: #e3f2fd; }
     .msg.outgoing { background: #fff3e0; }
-    .msg.system { background: #f3e5f5; font-style: italic; }
+    .msg.system { background: #f3e5f5; }
     .msg.error { background: #ffebee; color: #c62828; }
     .msg .meta { font-size: 11px; color: #666; margin-bottom: 2px; }
     #subscriptions {
@@ -77,6 +102,7 @@
       gap: 8px;
       flex-wrap: wrap;
       min-height: 30px;
+      align-items: center;
     }
     .subscription-tag {
       background: #e0e0e0;
@@ -93,6 +119,11 @@
       font-weight: bold;
     }
     .subscription-tag .remove:hover { color: #c00; }
+    .actions-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -119,6 +150,7 @@
         <input type="text" id="subscribeChannel" placeholder="general">
       </div>
       <button onclick="subscribe()" id="subscribeBtn" disabled>Subscribe</button>
+      <button onclick="refreshChannels()" id="refreshBtn" class="secondary" disabled>Refresh</button>
     </div>
     <h3 style="font-size: 0.9em; color: #666;">Active Subscriptions</h3>
     <div id="subscriptions"><em style="color: #999;">None</em></div>
@@ -143,8 +175,16 @@
 
   <div class="section">
     <h2>Messages</h2>
-    <button onclick="clearMessages()" style="margin-bottom: 10px; background: #6c757d;">Clear</button>
-    <div id="messages"></div>
+    <div class="tabs">
+      <button class="tab active" data-tab="chat" onclick="switchTab('chat')">Chat</button>
+      <button class="tab" data-tab="system" onclick="switchTab('system')">System</button>
+    </div>
+    <div class="actions-row">
+      <button onclick="clearMessages('chat')" class="secondary">Clear Chat</button>
+      <button onclick="clearMessages('system')" class="secondary">Clear System</button>
+    </div>
+    <div id="chat-messages" class="tab-content active"></div>
+    <div id="system-messages" class="tab-content"></div>
   </div>
 
   <script src="client.js"></script>
