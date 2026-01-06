@@ -121,6 +121,8 @@ func (m *ClientMessage) ValidateParams() error {
 		} else if m.Params.Content == nil || *m.Params.Content == "" {
 			return errors.New("Publish requires message content!")
 		}
+	case "list":
+
 	default:
 		return fmt.Errorf("Unknown action specified: '%s'", m.Action)
 	}
@@ -310,6 +312,16 @@ func (a *Application) ProcessMessage(m ClientMessage, clientName string) []byte 
 	case "unsubscribe":
 		err = a.UnSubscribeClient(clientName, *m.Params.ChannelName)
 		rsp = []byte(`{"status": "ok"}`)
+
+	case "list":
+		channels, err := a.ListChannels(clientName)
+		if err == nil {
+			chan_rsp := ListResponse{
+				Status: "ok",
+				Info:   listInfo{Channels: channels},
+			}
+			rsp, _ = json.Marshal(chan_rsp)
+		}
 
 	default:
 		err = fmt.Errorf("Invalid action: %s", m.Action)
